@@ -19,6 +19,7 @@ process macs3 {
     tuple val( id ), path( "macs3/*.bed" ), emit: bed
     tuple val( id ), path( "macs3/*.bdg" ), emit: bg
     tuple val( id ), path( "macs3/*_cutoff_analysis.txt" ), emit: cutoffs
+    tuple val( id ), path( "peak_length_histogram.png" ), emit: histogram 
 
     script:
     """
@@ -52,7 +53,8 @@ process macs3 {
             --control "\$ctrl" \
             --format BAMPE \
             --call-summits \
-            -p 0.1 \
+            -p 0.01 \
+            --min-length 30 \
             --cutoff-analysis \
             --outdir macs3 \
             --name "${id}.\$strand" \
@@ -100,6 +102,45 @@ process macs3 {
             | sort -k1,1 -k2,2n \
         ) \
     > "peaks.bed"
+
+ # Calculate peak lengths and generate histogram of number of peaks vs peak length
+    awk 'NR>1 {print \$3-\$2}' peaks.bed > peak_lengths.txt
+
+    python3 - <<EOF
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Load peak lengths
+lengths = np.loadtxt('peak_lengths.txt')
+
+# Create adaptive bins for axis
+bins = np.arange(min(lengths), max(lengths) + 2) - 0.5
+
+# Calculate mean and median
+mean_len = round(np.mean(lengths))
+median_len = round(np.median(lengths))
+
+# Print stats
+print(f"Mean peak length: {mean_len} bp")
+print(f"Median peak length: {median_len} bp")
+
+# Plot histogram of number of peaks vs peak length
+plt.figure(figsize=(8,6))
+plt.hist(lengths, bins=bins, color='cornflowerblue')
+plt.xlabel('Peak Length (bp)', fontsize=12)
+plt.ylabel('Number of Peaks', fontsize=12)
+plt.title('Peak Length Distribution (${id})', fontsize=14)
+plt.grid(alpha=0.3)
+
+# Add median and mean lines
+plt.axvline(median_len, color='midnightblue', linestyle='--', label=f'Median = {median_len} bp')
+plt.axvline(mean_len, color='midnightblue', linestyle='-', label=f'Mean = {mean_len} bp')
+plt.legend()
+
+# Save figure
+plt.tight_layout()
+plt.savefig("peak_length_histogram.png", dpi=300)
+EOF
 
     rm merged.bam
 
