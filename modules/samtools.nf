@@ -115,8 +115,8 @@ process sort_and_index_bam {
     script:
     """
     # filter out multimappers
-    #samtools view -@ ${task.cpus} -F260 -bS -q 3 "${bamfile}" -o filtered.bam
-    samtools sort -@ ${task.cpus} -m ${Math.round(task.memory.getGiga() * 0.8)}G "${bamfile}" -o "${id}.sorted.bam"
+    samtools view -@ ${task.cpus} -F260 -b -q 25 "${bamfile}" -o "${id}.filtered.bam"
+    samtools sort -@ ${task.cpus} -m ${Math.round(task.memory.getGiga() * 0.8)}G "${id}.filtered.bam" -o "${id}.sorted.bam"
     #samtools index -@ ${task.cpus} "${id}.sorted.bam" -o "${id}.sorted.bai"
     #rm filtered.bam
     """
