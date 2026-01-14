@@ -116,10 +116,9 @@ lengths = np.loadtxt('peak_lengths.txt')
 # Create adaptive bins for axis
 bins = np.arange(min(lengths), max(lengths) + 2) - 0.5
 
-# Calculate total, mean and median
+# Calculate mean and median
 mean_len = round(np.mean(lengths))
 median_len = round(np.median(lengths))
-num_peaks = len(lengths)
 
 # Print stats
 print(f"Mean peak length: {mean_len} bp")
@@ -130,7 +129,7 @@ plt.figure(figsize=(8,6))
 plt.hist(lengths, bins=bins, color='cornflowerblue')
 plt.xlabel('Peak Length (bp)', fontsize=12)
 plt.ylabel('Number of Peaks', fontsize=12)
-plt.title(f'Peak Length Distribution ({num_peaks} peaks) (${id})', fontsize=14)
+plt.title('Peak Length Distribution (${id})', fontsize=14)
 plt.grid(alpha=0.3)
 
 # Add median and mean lines
