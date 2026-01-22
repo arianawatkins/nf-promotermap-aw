@@ -110,8 +110,10 @@ process extract_peak_sequences {
         saveAs: { "${id}.${it}" },
     )
 
+
+    // Need to add the input val( orientation ) here - need to figure out what is going in 
     input:
-    tuple val( id ), path( peaks ), path( genome )
+    tuple val( id ), path( peaks ), path( genome ) //, val( orientation )
 
     output:
     tuple val( id ), path( "peak-seqs.fasta" ), emit: fasta

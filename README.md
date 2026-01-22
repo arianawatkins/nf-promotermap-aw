@@ -176,7 +176,7 @@ Read more [here](https://cutadapt.readthedocs.io/en/stable/guide.html#specifying
 
 ### Example inputs
 
-You cna find some examples in the `test` directory of this repository.
+You can find some examples in the `test` directory of this repository.
 
 ## Outputs
 

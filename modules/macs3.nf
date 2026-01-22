@@ -10,7 +10,7 @@ process macs3 {
     )
 
     input:
-    tuple val( id ), path( bamfile ), path( bamfile_ctrl, stageAs: "control/*" )
+    tuple val( id ), path( bamfile ), path( bamfile_ctrl, stageAs: "control/*" ), val( orientation )
 
     output:
     tuple val( id ), path( "peaks.bed" ), emit: peaks
@@ -23,13 +23,16 @@ process macs3 {
 
     script:
     """
+    # Merge all treatment BAM files (required by MACS3)
     samtools merge -@ ${task.cpus} -o merged.bam ${bamfile}
+    #Split BAMs by strand
     samtools view -bS merged.bam -h -F 20 -o f.bam
     samtools view -bS merged.bam -h -f 16 -o r.bam
 
     samtools view -bS "${bamfile_ctrl}" -h -F 20 -o f_ctrl.bam
     samtools view -bS "${bamfile_ctrl}" -h -f 16 -o r_ctrl.bam
 
+    # Calculate genome size for MACS3
     samtools view -H "${bamfile_ctrl}" \
     | awk '\
         \$1 == "@SQ" { 
@@ -44,6 +47,7 @@ process macs3 {
     ' \
     > genome-size.txt
 
+    # MACS3 Execution Loop
     for f in {f,r}.bam
     do
         strand=\$(basename \$f .bam)
@@ -103,10 +107,30 @@ process macs3 {
         ) \
     > "peaks.bed"
 
+    # Orientation switch for peaks.bed and summits.bed files
+
+    if [ "${orientation}" = "rev" ]; then
+        awk -v OFS='\t' '{
+            if (\$6 == "+") \$6 = "-"
+            else if (\$6 == "-") \$6 = "+"
+            print
+        }' peaks.bed > peaks.rev.bed
+        mv peaks.rev.bed peaks.bed
+
+        awk -v OFS='\t' '{
+            if (\$6 == "+") \$6 = "-"
+            else if (\$6 == "-") \$6 = "+"
+            print
+        }' summits.bed > summits.rev.bed
+        mv summits.rev.bed summits.bed
+    
+    fi  
+
+
  # Calculate peak lengths and generate histogram of number of peaks vs peak length
     awk 'NR>1 {print \$3-\$2}' peaks.bed > peak_lengths.txt
 
-    python3 - <<EOF
+python3 - <<EOF
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -119,6 +143,12 @@ bins = np.arange(min(lengths), max(lengths) + 2) - 0.5
 # Calculate mean and median
 mean_len = round(np.mean(lengths))
 median_len = round(np.median(lengths))
+
+# -------------------------------------------------------
+#  WORK IN PROGRESS
+#  Add + print total peaks so you can see how many peaks
+#  there are in a given sample too
+# -------------------------------------------------------
 
 # Print stats
 print(f"Mean peak length: {mean_len} bp")

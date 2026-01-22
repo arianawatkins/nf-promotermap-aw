@@ -1,0 +1,4 @@
+{
+    "nextflow.debug": true,
+    "nextflow.errorReportingMode": "paranoid"
+}

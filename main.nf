@@ -25,24 +25,20 @@ def pipeline_name = """\
 if ( params.help ) {
    println """${pipeline_name}
          Nextflow pipeline to map Illumina sequences to bacterial genomes and call peaks.
-
          Usage:
             nextflow run scbirlab/nf-promotermap --sample_sheet <csv> --fastq_dir <dir> --control_label <text> [--inputs <dir> --mapper (bowtie2|minimap2)]
             nextflow run scbirlab/nf-promotermap -c <config-file>
-
          Required parameters:
             sample_sheet      Path to a CSV with information about the samples 
                                  to be processed
             fastq_dir         Path to where FASTQ files are stored
             control_label     The bin ID of background controls
-
          Optional parameters (with defaults):  
             inputs            Directory containing inputs. Default: "./inputs".
             outputs           Directory to contain outputs. Default: "./outputs".
             trim_qual         Minimum base-call quality for trimming. Default: 5.
             min_length        Discard reads shorter than this number of bases after trimming. Default: 9.
             mapper            Alignment tool. Default: "bowtie2"
-
          The parameters can be provided either in the `nextflow.config` file or on the `nextflow run` command.
    
    """.stripIndent()
@@ -195,6 +191,11 @@ workflow {
       .unique()
       .set { treat_ch }  // sample_id, expt_id
    
+   // Purpose: Add an orientation channel containing promoter direction
+   csv_ch
+      .map { tuple( it.expt_id, it.promoter_direction) }
+      .unique()
+      .set { orientation_ch } // expt_id, promoter_direction
 
    /*
    ========================================================================================
@@ -329,7 +330,11 @@ workflow {
          by: 0,
       )  // expt_id, [bam_bai, ..], bam_bai_ctrl
       .set { expt2bams }
-   expt2bams | MACS3_all_peaks
+   
+   // Purpose: Combine with orientation channel to attach promoter direction 
+   expt2bams
+      .combine( orientation_ch, by: 0 ) // expt_id, promoter_orientation
+      | MACS3_all_peaks
 
    alignments
       .map { tuple( it[1], it[3] ) } // expt_id, bw
@@ -337,7 +342,7 @@ workflow {
       .groupTuple( by: 0 )  // expt_id, [bw, ..]
       .set { expt2bigwig }
    expt2bigwig
-      .combine( expt2gffbed, by: 0 ) 
+      .combine( expt2gffbed, by: 0 )
       | plot_peaks
 
    MACS3_all_peaks.out.peaks  // expt_id, bed

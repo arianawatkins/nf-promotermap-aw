@@ -20,3 +20,5 @@ nextflow run "$script_dir"/.. \
     --sample_sheet "$script_dir"/inputs/sample-sheet.csv \
     --inputs "$script_dir"/inputs \
     --outputs "$script_dir"/outputs
+    #Do I not need to add the control label here?
+    #--control_label U
